@@ -27,52 +27,16 @@
 2、ThreadPool::SetThresholdRedistribution(uint32_t threshold)
     设置任务重新分配的阈值，根据需要设置，当存在空闲线程时，超过阀值时, 当前工作线程就会把超过阀值的任务重新分派出去
 
-3、ThreadPool::SetMaxTaskCount(uint32_t  task_count)
+3、ThreadPool::AddTask(Task* pTask);
+    添加任务到线程池
+
+4、ThreadPool::SetMaxTaskCount(uint32_t  task_count)
     设置最大任务数，任务完成后，打印总耗时和tps，并强行退出进程， 该类接口只用于线程池性能测试，生产环境勿用该接口
-```
 
-# 示例代码
+# 如何衡量一个线程池的性能
 
-```
-#include <unistd.h>
-#include <stdio.h>
-#include <iostream>
-#include "threadPool.h"
-#include "thread.h"
-#include "task.h"
+测试大量消耗时长不同的 Task。
 
-using namespace std;
+# 测试demo
 
-class  TestTask : public Task
-{
-public:
-    TestTask(int i){
-        m_i = i;
-    }
-
-    void run() {
-        //printf("hello %d\n", m_i);
-    }
-private:
-    int m_i;
-};
-
-int main(int argc, char *argv[])
-{
-
-    int max_task_cnt = 10 * 10000;
-    ThreadPool thread_pool; // 建立线程池
-    thread_pool.Init(10); // 线程池的数量
-    thread_pool.SetThresholdRedistribution(1); // 设置重新分配的阀值，当存在空闲线程时，超过阀值时, 当前工作线程就会把超过阀值的任务重新分派出去
-     
-    thread_pool.SetMaxTaskCount(max_task_cnt); // 设置最大任务数，任务完成后，打印总耗时和tps，并强行退出进程，只用于线程池性能测试,如果不测，则注释掉这一句
-
-    TestTask *t = NULL;
-    for (int i=0 ; i< max_task_cnt; i++) {
-        t = new TestTask(i);
-        thread_pool.AddTask(t);
-    }
-    pause();
-    return 0;
-}
-```
+请查看 demo.cpp(比较粗略的估算在一定计算量的task的线程池性能)

@@ -32,6 +32,25 @@ void WorkerThread::Start()
     (void)pthread_create(&m_thread_id, NULL, StartRoutine, this);
 }
 
+void WorkerThread::Redistribution()
+{
+    // 资源再分配
+    if(m_thread_idx == m_parent_thread_pool->busy_thread_idx()
+            && m_task_cnt > m_parent_thread_pool->m_threshold_redistribution ) {
+        uint32_t pop_task_cnt = m_task_cnt >> 1; // 分配一半出去
+        Task* pTask = NULL;
+        for(uint32_t i=0; i< pop_task_cnt; i++) {
+            m_thread_notify.Lock();
+            pTask = m_task_list.front();
+            m_task_list.pop_front();
+            atomic_sub(&m_task_cnt,1);
+            m_thread_notify.Unlock();
+            m_parent_thread_pool->AddTask(pTask);
+        }
+        m_parent_thread_pool->clean_busy_thread_idx();
+    }
+}
+
 void WorkerThread::Execute()
 {
     while (true) {
@@ -51,21 +70,7 @@ void WorkerThread::Execute()
         m_parent_thread_pool->AtomicSubTaskCount();
         atomic_sub(&m_task_cnt,1);
 
-        // 资源再分配
-        if(m_thread_idx == m_parent_thread_pool->busy_thread_idx()
-                && m_task_cnt > m_parent_thread_pool->m_threshold_redistribution ) {
-            uint32_t pop_task_cnt = m_task_cnt >> 1; // 分配一半出去
-            Task* pTask = NULL;
-            for(uint32_t i=0; i< pop_task_cnt; i++) {
-                m_thread_notify.Lock();
-                pTask = m_task_list.front();
-                m_task_list.pop_front();
-                atomic_sub(&m_task_cnt,1);
-                m_thread_notify.Unlock();
-                m_parent_thread_pool->AddTask(pTask);
-            }
-            m_parent_thread_pool->clean_busy_thread_idx();
-        }
+        this->Redistribution();
 
         delete pTask;
     }
@@ -144,7 +149,7 @@ void ThreadPool::CostTime()
         sec = m_time_stop.tv_sec - m_time_start.tv_sec;
     }
     double tps =(1.0 * m_max_task_cnt_record ) / (1.0* sec + 1.0*usec/1000000 );
-    printf("elapsed time: %d.%06d usec, tps:=%f \n",sec,usec, tps);
+    printf("total: %d, elapsed time: %d.%06d usec, tps:=%f \n", m_max_task_cnt_record, sec, usec, tps);
 }
 
 
@@ -218,16 +223,10 @@ void ThreadPool::clean_busy_thread_idx()
     m_busy_thread_idx = m_worker_size;
 }
 
-void ThreadPool::AddTask(Task* pTask)
+uint32_t ThreadPool::GetOne()
 {
-    /*
-     * select a random thread to push task
-     * we can also select a thread that has less task to do
-     * but that will scan the whole thread list and use thread lock to get each task size
-     */
-    //uint32_t thread_idx = random() % m_worker_size;
-    //m_worker_list[thread_idx].PushTask(pTask);
-
+    // uint32_t thread_idx = random() % m_worker_size;
+    // m_worker_list[thread_idx].PushTask(pTask);
     uint32_t idle_thread_idx = m_idle_thread_idx;
     uint32_t task_cnt = m_worker_list[m_idle_thread_idx].task_cnt();
     if(task_cnt > 0) {
@@ -247,7 +246,11 @@ void ThreadPool::AddTask(Task* pTask)
             }
         }
     }
+    return idle_thread_idx;
+}
 
-    m_worker_list[idle_thread_idx].PushTask(pTask);
+void ThreadPool::AddTask(Task* pTask)
+{
+    m_worker_list[this->GetOne()].PushTask(pTask);
 }
 

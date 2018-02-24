@@ -25,6 +25,7 @@ public:
     void set_thread_idx(uint32_t idx) { m_thread_idx = idx; }
     uint32_t task_cnt() const;
     void set_parent_thread_pool(ThreadPool *parent_thread_pool);
+    void Redistribution();
 
 private:
     uint32_t		m_thread_idx;
@@ -53,13 +54,15 @@ public:
 private:
     void AtomicSubTaskCount();
     void CostTime();
+    uint32_t GetOne();
 
     uint32_t busy_thread_idx() const;
     void update_busy_thread_idx();
     void clean_busy_thread_idx();
     void setidle_thread_idx(const pthread_t &idle_thread_idx);
 
-    /* 让WorkerThread的函数Execute能访问 ThreadPool 的私有成员 */
+    /* 让WorkerThread的函数Redistribution能访问 ThreadPool 的私有成员 */
+    friend void WorkerThread::Redistribution();
     friend void WorkerThread::Execute();
 private:
     /* idle thread id 空闲的线程编号 */
