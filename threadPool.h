@@ -40,13 +40,14 @@ public:
     ThreadPool();
     virtual ~ThreadPool();
 
-    //  测试用接口，该类接口只用于性能测试，生产环境勿用该接口
-    bool SetMaxTaskCount(uint32_t  task_count); //
-    // 生产环境接口
+    /* 测试用接口，该类接口只用于性能测试，生产环境勿用该接口 */
+    bool SetMaxTaskCount(uint32_t  task_count);
+    /* 初始化线程池的工作线程的数量 */
     bool Init(uint32_t worker_size);
+    /* 添加任务到线程池 */
     void AddTask(Task* pTask);
     void Destory();
-    // 根据需要设置，  当存在空闲线程时，超过阀值时, 当前工作线程就会把超过阀值的任务重新分派出去
+    /* 根据需要设置，当存在空闲线程时，超过阀值时, 当前工作线程就会把超过阀值的任务重新分派出去 */
     void SetThresholdRedistribution(uint32_t threshold);
 
 private:
@@ -58,10 +59,11 @@ private:
     void clean_busy_thread_idx();
     void setidle_thread_idx(const pthread_t &idle_thread_idx);
 
-    friend void WorkerThread::Execute(); // 让WorkerThread的函数Execute能访问 ThreadPool 的私有成员
-
+    /* 让WorkerThread的函数Execute能访问 ThreadPool 的私有成员 */
+    friend void WorkerThread::Execute();
 private:
-    uint32_t    m_idle_thread_idx;  // idle thread id 空闲的线程编号
+    /* idle thread id 空闲的线程编号 */
+    uint32_t    m_idle_thread_idx;  
     uint32_t    m_worker_size;
     WorkerThread* 	m_worker_list;
 
@@ -72,10 +74,10 @@ private:
     /* 当存在空闲线程时，超过阀值时, 当前工作线程就会把超过阀值的任务重新分派出去   */
     uint32_t m_threshold_redistribution;
 
-    // 测试接口的私有变量
+    /* 测试接口的私有变量 */
     bool m_is_set_max_task_cnt;
     volatile uint32_t m_max_task_cnt;
-   uint32_t m_max_task_cnt_record; //
+    uint32_t m_max_task_cnt_record; //
     struct timeval m_time_start;
     struct timeval m_time_stop;
 };
